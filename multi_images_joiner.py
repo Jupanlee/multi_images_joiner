@@ -27,25 +27,42 @@ def JoinFunc(imagesFolder, orientation):
 	# 根据拼接方向（水平、垂直）进行拼接
 	# box 的类型为 tuple，中文名为元组，与list的不同之处在于元素不可修改
 	offset = 0
-
+	output_width = 0
+	output_height = 0
+	offsets = [0]
+	resize_factors = []
 	if orientation == 'vertical':
-	    output_height = sum([image.size[0] for image in images])
-	    output_width = max([image.size[1] for image in images])
-	    I = 0
+		I = 1
+		output_width = max( [image.size[0] for image in images] )
+		for image in images:
+			resize_factor = output_width / image.size[0]
+			resize_factors.append(resize_factor)
+			offsets.append(int(image.size[1]*resize_factor))
+
+			output_height = sum([int(image.size[1]*resize_factor), output_height])
 	else:
-	    output_height = max([image.size[0] for image in images])
-	    output_width = sum([image.size[1] for image in images])
-	    I = 1
+		I = 0
+		output_height = max( [image.size[1] for image in images] ) 
+		for image in images:
+			resize_factor = output_height / image.size[1]
+			resize_factors.append(resize_factor)
+			offsets.append(int(image.size[0]*resize_factor))
 
-	joinImage = Image.new('RGBA', (output_height, output_width))
+			output_width = sum( [int(image.size[0]*resize_factor), output_width] )
+		
+	joinImage = Image.new('RGBA', (output_width, output_height))
 
+	count = 0
 	for image in images:
-	    if orientation == 'vertical':
-	        box = (offset, 0)
-	    else:
-	        box = (0, offset)
-	    joinImage.paste(image, box)
-	    offset += image.size[I]
+		offset = sum(offsets[0:count+1])
+		resize_factor = resize_factors[count]
+		if orientation == 'vertical':
+			box = (0, offset)
+		else:
+			box = (offset, 0)
+		reImage = image.resize((int(image.size[0]*resize_factor), int(image.size[1]*resize_factor)))
+		joinImage.paste(reImage, box)
+		count += 1
 
 	return joinImage
 
@@ -56,11 +73,11 @@ if __name__ == '__main__':
 	parser.add_argument('--imagesFolder', default = 'JoinImages')
 
 	# 指定拼接方向
-	parser.add_argument('--orientation', default = 'horizontal')
+	parser.add_argument('--orientation', default = 'vertical')
 
 	args = parser.parse_args()
 	joinImage = JoinFunc(args.imagesFolder, args.orientation)
-	joinImage.save(os.path.join(os.getcwd(), args.imagesFolder, 'joinImage.png'))
+	joinImage.save(os.path.join(os.getcwd(), 'joinImage'+args.imagesFolder+args.orientation+'.png'))
 	print('Successfully join these images!')
 
 
